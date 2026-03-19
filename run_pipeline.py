@@ -13,7 +13,7 @@ def main():
     if not os.path.exists(os.path.join(processed_dir, "mavic1")):
         print("\n--- Step 1: Extracting Drone Classes from Raw Audio ---")
         if os.path.exists(raw_audio_file):
-            extract_drone_classes(raw_audio_file, processed_dir, chunk_length_ms=100)
+            extract_drone_classes(raw_audio_file, processed_dir, chunk_length_ms=25)
         else:
             print(f"Error: Could not find '{raw_audio_file}'.")
             print("Please ensure your audio file is placed in 'data/raw/'.")
