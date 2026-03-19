@@ -17,6 +17,9 @@ def extract_drone_classes(input_file, base_output_dir, chunk_length_ms=100):
     """Slices specific timeframes from the audio and sorts them by drone type."""
     print(f"Loading large audio file: {input_file}...")
     audio = AudioSegment.from_wav(input_file).set_channels(1)
+
+    print("Downsampling audio to 16kHz for model stability...")
+    audio = audio.set_frame_rate(16000)
     
     for drone_name, times in DRONE_TIMEFRAMES.items():
         print(f"\nProcessing {drone_name}...")
