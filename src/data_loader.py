@@ -41,6 +41,10 @@ def extract_drone_classes(input_file, base_output_dir, chunk_length_ms=100):
             
             samples = chunk.get_array_of_samples()
             tensor_data = torch.tensor(samples, dtype=torch.float32)
+
+            # Hamming window
+            window = torch.hamming_window(tensor_data.shape[0])
+            tensor_data = tensor_data * window
             
             if tensor_data.max() > 0:
                 tensor_data = tensor_data / tensor_data.abs().max()

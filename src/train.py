@@ -1,5 +1,6 @@
 import os
 import glob
+import csv
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -60,6 +61,12 @@ def train_model(data_dir, epochs=10, batch_size=32, learning_rate=0.001):
     optimizer = optim.Adam(model.parameters(), lr=learning_rate) 
     
     print(f"Training on device: {device}...")
+
+    # Create our CSV tracking file and write the headers
+    with open('training_history.csv', mode='w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(['Epoch', 'Train Loss', 'Train Acc', 'Val Loss', 'Val Acc'])
+
     for epoch in range(epochs):
         model.train()
         running_loss = 0.0
@@ -106,6 +113,11 @@ def train_model(data_dir, epochs=10, batch_size=32, learning_rate=0.001):
               f"| Train Acc: {train_acc:.2f}% "
               f"| Val Loss: {val_loss/len(val_loader):.4f} "
               f"| Val Acc: {val_acc:.2f}%")
+        
+        # Log the metrics to the CSV file
+        with open('training_history.csv', mode='a', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow([epoch+1, running_loss/len(train_loader), train_acc, val_loss/len(val_loader), val_acc])
 
     print("Training Complete!")
     return model
