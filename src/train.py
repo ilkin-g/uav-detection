@@ -73,6 +73,7 @@ def train_model(data_dir, epochs=10, batch_size=32, learning_rate=0.001):
             outputs = model(inputs)
             loss = criterion(outputs, labels)
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
             
             running_loss += loss.item()

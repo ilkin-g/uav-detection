@@ -26,7 +26,7 @@ def main():
         data_dir=processed_dir, 
         epochs=15,
         batch_size=64,
-        learning_rate=0.001
+        learning_rate=1e-4
     )
     
     if trained_model:
