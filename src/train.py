@@ -58,7 +58,7 @@ def train_model(data_dir, epochs=10, batch_size=32, learning_rate=0.001):
     
     class_weights = torch.tensor([1.0, 1.3, 1.5], dtype=torch.float32).to(device)
     criterion = nn.CrossEntropyLoss(weight=class_weights)
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate) 
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-4) 
     
     print(f"Training on device: {device}...")
 
