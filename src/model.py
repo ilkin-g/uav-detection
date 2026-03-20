@@ -38,6 +38,7 @@ class UAVDetector(nn.Module):
         )
         
         self.classifier = nn.Sequential(
+            nn.BatchNorm1d(m_coeffs),
             nn.Linear(m_coeffs, 15),
             nn.ReLU(),
             nn.Linear(15, 3)
