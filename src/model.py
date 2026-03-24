@@ -1,41 +1,21 @@
 import torch
 import torch.nn as nn
-from src.rgw_layer import vp_layer
+import torch.nn.functional as F
 from src.wavelets import adaRatGaussWav
 
 class UAVDetector(nn.Module):
-    def __init__(self, signal_length, m_coeffs=10, p_zeros=3, r_poles=4, device=None):
+    def __init__(self, signal_length, m_coeffs=20, p_zeros=3, r_poles=4, kernel_length=128, device=None):
         super(UAVDetector, self).__init__()
         self.device = device if device else torch.device("cpu")
+        self.m_coeffs = m_coeffs
+        self.p_zeros = p_zeros
+        self.r_poles = r_poles
         
-        init_zeros = [0.5] * p_zeros
-        init_poles = [0.1, 0.5] * r_poles
-        init_sigma = [1.0]
+        self.kernel_length = kernel_length
         
-        init_wavelets = []
-        translations = torch.linspace(-4, 4, m_coeffs).tolist()
-        for i in range(m_coeffs):
-            init_wavelets.extend([1.0, translations[i]])
-            
-        initial_params = init_zeros + init_poles + init_wavelets + init_sigma
-        init_tensor = torch.tensor(initial_params, dtype=torch.float32, device=self.device)
-        nparams = len(initial_params)
-
-        self.rgw_vp_layer = vp_layer(
-            ada=adaRatGaussWav,
-            n_in=signal_length,
-            n_out=m_coeffs,
-            nparams=nparams,
-            p=p_zeros,
-            r=r_poles,
-            b_min=0.01,
-            a=-5.0,
-            b=5.0,
-            penalty=0.1,
-            target=0,
-            device=self.device,
-            init=init_tensor
-        )
+        self.rgw_zeros = nn.Parameter(torch.randn(p_zeros))
+        self.rgw_poles = nn.Parameter(torch.randn(2 * r_poles))
+        self.rgw_scales = nn.Parameter(torch.rand(m_coeffs))
         
         self.classifier = nn.Sequential(
             nn.BatchNorm1d(m_coeffs),
@@ -43,14 +23,27 @@ class UAVDetector(nn.Module):
             nn.Linear(m_coeffs, 15),
             nn.ReLU(),
             nn.Dropout(p=0.5),
-            nn.Linear(15, 3)
+            nn.Linear(15, 3) 
         )
 
+    def rgw_conv(self, x):
+        t_translations = torch.zeros(self.m_coeffs, device=self.device) 
+        aff = torch.stack((self.rgw_scales, t_translations), dim=1).reshape(-1)
+        par = torch.cat([self.rgw_zeros, self.rgw_poles, aff, torch.tensor([2.0], device=self.device)])
+
+        Phi = adaRatGaussWav(self.kernel_length, self.m_coeffs, par, self.p_zeros, self.r_poles, a=-5.0, b=5.0, bmin=0.01, s_square=True, device=self.device)[0]
+        
+        kernels = Phi.T.unsqueeze(1) 
+        
+        conv_out = F.conv1d(x, kernels)
+        return conv_out
+
     def forward(self, x):
-        features = self.rgw_vp_layer(x)
+
+        features = self.rgw_conv(x)
         
-        features = features.squeeze(-1) 
+        pooled_features = F.adaptive_max_pool1d(features, 1).squeeze(-1)
         
-        output = self.classifier(features)
+        output = self.classifier(pooled_features)
         
         return output
