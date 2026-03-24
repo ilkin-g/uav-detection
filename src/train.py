@@ -58,7 +58,8 @@ def train_model(data_dir, epochs=10, batch_size=32, learning_rate=0.001):
     
     class_weights = torch.tensor([1.0, 1.3, 1.5], dtype=torch.float32).to(device)
     criterion = nn.CrossEntropyLoss(weight=class_weights)
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-4) 
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-4)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=2)
     
     print(f"Training on device: {device}...")
 
@@ -107,6 +108,10 @@ def train_model(data_dir, epochs=10, batch_size=32, learning_rate=0.001):
                 correct_val += (predicted == labels).sum().item()
                 
         val_acc = 100 * correct_val / total_val
+        avg_val_loss = val_loss / len(val_loader)
+
+        scheduler.step(avg_val_loss)
+        current_lr = optimizer.param_groups[0]['lr']
         
         print(f"Epoch [{epoch+1}/{epochs}] "
               f"| Train Loss: {running_loss/len(train_loader):.4f} "
@@ -117,7 +122,7 @@ def train_model(data_dir, epochs=10, batch_size=32, learning_rate=0.001):
         # Log the metrics to the CSV file
         with open('training_history.csv', mode='a', newline='') as file:
             writer = csv.writer(file)
-            writer.writerow([epoch+1, running_loss/len(train_loader), train_acc, val_loss/len(val_loader), val_acc])
+            writer.writerow([epoch+1, running_loss/len(train_loader), train_acc, avg_val_loss, val_acc, current_lr])
 
     print("Training Complete!")
     return model
